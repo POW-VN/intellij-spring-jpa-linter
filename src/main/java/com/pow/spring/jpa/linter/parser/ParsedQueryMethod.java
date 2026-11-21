@@ -15,6 +15,7 @@ public class ParsedQueryMethod {
     private final List<String> conjunctions;
     private final List<QuerySort> sorts;
     private final int totalExpectedParams;
+    private final List<String> suggestedMethodNames;
 
     public ParsedQueryMethod(
             String originalName,
@@ -29,6 +30,23 @@ public class ParsedQueryMethod {
             List<QuerySort> sorts,
             int totalExpectedParams
     ) {
+        this(originalName, isDerivedQuery, prefixError, syntaxErrors, subject, isDistinct, limit, conditions, conjunctions, sorts, totalExpectedParams, Collections.emptyList());
+    }
+
+    public ParsedQueryMethod(
+            String originalName,
+            boolean isDerivedQuery,
+            String prefixError,
+            List<String> syntaxErrors,
+            String subject,
+            boolean isDistinct,
+            Integer limit,
+            List<QueryCondition> conditions,
+            List<String> conjunctions,
+            List<QuerySort> sorts,
+            int totalExpectedParams,
+            List<String> suggestedMethodNames
+    ) {
         this.originalName = originalName;
         this.isDerivedQuery = isDerivedQuery;
         this.prefixError = prefixError;
@@ -40,6 +58,7 @@ public class ParsedQueryMethod {
         this.conjunctions = conjunctions != null ? conjunctions : Collections.emptyList();
         this.sorts = sorts != null ? sorts : Collections.emptyList();
         this.totalExpectedParams = totalExpectedParams;
+        this.suggestedMethodNames = suggestedMethodNames != null ? suggestedMethodNames : Collections.emptyList();
     }
 
     public String getOriginalName() { return originalName; }
@@ -53,4 +72,5 @@ public class ParsedQueryMethod {
     public List<String> getConjunctions() { return conjunctions; }
     public List<QuerySort> getSorts() { return sorts; }
     public int getTotalExpectedParams() { return totalExpectedParams; }
+    public List<String> getSuggestedMethodNames() { return suggestedMethodNames; }
 }

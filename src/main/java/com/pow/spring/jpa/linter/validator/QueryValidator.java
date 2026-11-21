@@ -56,29 +56,34 @@ public class QueryValidator {
 
         // 1. Syntax errors
         for (String err : parsed.getSyntaxErrors()) {
-            issues.add(new DiagnosticIssue(err, "Error", name, Collections.emptyList()));
+            issues.add(new DiagnosticIssue(err, "Error", name, parsed.getSuggestedMethodNames()));
         }
 
         // 2. Prefix errors
         if (parsed.getPrefixError() != null) {
-            issues.add(new DiagnosticIssue(parsed.getPrefixError(), "Error", name, Collections.emptyList()));
+            issues.add(new DiagnosticIssue(parsed.getPrefixError(), "Error", name, parsed.getSuggestedMethodNames()));
         }
 
         // 3. Conditions & properties
         for (QueryCondition cond : parsed.getConditions()) {
             if (cond.getOperatorError() != null) {
+                String fixedName = name.replace(cond.getRaw(), cond.getPropertyName() + (cond.getOperator() != null ? cond.getOperator() : ""));
                 issues.add(new DiagnosticIssue(
                         "Spring Data JPA: " + cond.getOperatorError(),
                         "Error",
                         name,
-                        Collections.emptyList()
+                        Collections.singletonList(fixedName)
                 ));
             }
 
             if (entityName != null) {
                 EntityResolver.PropertyResolution res = entityResolver.resolvePropertyPath(entityName, cond.getPropertyName());
                 if (!res.valid) {
-                    List<String> suggestions = res.suggestion != null ? Collections.singletonList(res.suggestion) : Collections.emptyList();
+                    List<String> suggestions = new ArrayList<>();
+                    if (res.suggestion != null) {
+                        String fixedProp = fixPropertyName(cond.getPropertyName(), res.suggestion);
+                        suggestions.add(name.replace(cond.getPropertyName(), fixedProp));
+                    }
                     issues.add(new DiagnosticIssue(
                             "Spring Data JPA: " + res.error,
                             "Error",
@@ -92,18 +97,23 @@ public class QueryValidator {
         // 4. Sorts
         for (QuerySort sort : parsed.getSorts()) {
             if (sort.getDirectionError() != null) {
+                String fixedName = name.replace(sort.getRaw(), sort.getPropertyName() + sort.getDirection());
                 issues.add(new DiagnosticIssue(
                         "Spring Data JPA: " + sort.getDirectionError(),
                         "Error",
                         name,
-                        Collections.singletonList(sort.getDirection())
+                        Collections.singletonList(fixedName)
                 ));
             }
 
             if (entityName != null && sort.getPropertyName() != null && !sort.getPropertyName().isEmpty()) {
                 EntityResolver.PropertyResolution res = entityResolver.resolvePropertyPath(entityName, sort.getPropertyName());
                 if (!res.valid) {
-                    List<String> suggestions = res.suggestion != null ? Collections.singletonList(res.suggestion) : Collections.emptyList();
+                    List<String> suggestions = new ArrayList<>();
+                    if (res.suggestion != null) {
+                        String fixedProp = fixPropertyName(sort.getPropertyName(), res.suggestion);
+                        suggestions.add(name.replace(sort.getPropertyName(), fixedProp));
+                    }
                     issues.add(new DiagnosticIssue(
                             "Spring Data JPA (Sort): " + res.error,
                             "Error",
@@ -128,5 +138,28 @@ public class QueryValidator {
         }
 
         return issues;
+    }
+
+    private static String fixPropertyName(String rawProp, String suggestion) {
+        if (suggestion == null || suggestion.isEmpty()) return rawProp;
+        if (rawProp.contains("_")) {
+            String[] parts = rawProp.split("_");
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < parts.length; i++) {
+                if (i > 0) sb.append("_");
+                if (parts[i].equalsIgnoreCase(suggestion) || parts[i].toLowerCase().contains(suggestion.toLowerCase())) {
+                    sb.append(capitalize(suggestion));
+                } else {
+                    sb.append(parts[i]);
+                }
+            }
+            return sb.toString();
+        }
+        return capitalize(suggestion);
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

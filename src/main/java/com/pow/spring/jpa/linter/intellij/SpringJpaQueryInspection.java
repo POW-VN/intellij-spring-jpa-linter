@@ -1,11 +1,14 @@
 package com.pow.spring.jpa.linter.intellij;
 
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool;
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.PsiShortNamesCache;
+import com.pow.spring.jpa.linter.intellij.quickfix.AddQueryAnnotationQuickFix;
+import com.pow.spring.jpa.linter.intellij.quickfix.RenameMethodQuickFix;
 import com.pow.spring.jpa.linter.parser.MethodLexer;
 import com.pow.spring.jpa.linter.resolver.EntityInfo;
 import com.pow.spring.jpa.linter.resolver.EntityResolver;
@@ -14,6 +17,7 @@ import com.pow.spring.jpa.linter.validator.JavaMethodInfo;
 import com.pow.spring.jpa.linter.validator.QueryValidator;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -79,7 +83,25 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
                 for (DiagnosticIssue issue : issues) {
                     PsiElement nameIdentifier = method.getNameIdentifier();
                     if (nameIdentifier != null) {
-                        holder.registerProblem(nameIdentifier, issue.getMessage());
+                        List<LocalQuickFix> fixes = new ArrayList<>();
+                        for (String suggestion : issue.getSuggestions()) {
+                            if (suggestion != null && !suggestion.isEmpty()) {
+                                fixes.add(new RenameMethodQuickFix(suggestion));
+                            }
+                        }
+                        if (issue.getMessage().contains("missing 'By'")
+                                || issue.getMessage().contains("Parameter count mismatch")
+                                || issue.getMessage().contains("Unknown operator")
+                                || issue.getMessage().contains("does not exist on entity")
+                                || issue.getMessage().contains("Invalid")) {
+                            fixes.add(new AddQueryAnnotationQuickFix());
+                        }
+
+                        holder.registerProblem(
+                                nameIdentifier,
+                                issue.getMessage(),
+                                fixes.toArray(new LocalQuickFix[0])
+                        );
                     }
                 }
             }

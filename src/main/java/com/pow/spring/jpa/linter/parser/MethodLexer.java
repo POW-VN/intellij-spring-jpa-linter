@@ -11,7 +11,7 @@ public class MethodLexer {
     ));
 
     private static final Pattern PREFIX_PATTERN = Pattern.compile("^([a-z]+)(.*)By$");
-    private static final Pattern ORDER_TYPO_PATTERN = Pattern.compile("(order[a-zA-Z]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ORDER_TYPO_PATTERN = Pattern.compile("([oO]rder[a-z]*[bB]y[a-z]*|[oO]der[a-z]*[bB]y[a-z]*|[oO]rder[a-z]+)(?=[A-Z0-9_]|$)");
     private static final Pattern DIR_PATTERN = Pattern.compile("(Asc|Desc|[Aa]s[a-z]*|[Dd]es[a-z]*)(?=[A-Z0-9_]|$)");
 
     public static class OperatorDef {
@@ -54,6 +54,9 @@ public class MethodLexer {
         OPERATOR_TYPOS.put("greatthan", "GreaterThan");
         OPERATOR_TYPOS.put("greatethan", "GreaterThan");
         OPERATOR_TYPOS.put("greaterthen", "GreaterThan");
+        OPERATOR_TYPOS.put("graterthan", "GreaterThan");
+        OPERATOR_TYPOS.put("gratethan", "GreaterThan");
+        OPERATOR_TYPOS.put("graterthen", "GreaterThan");
         OPERATOR_TYPOS.put("lessthen", "LessThan");
         OPERATOR_TYPOS.put("lessthan", "LessThan");
         OPERATOR_TYPOS.put("notcontaning", "NotContaining");
@@ -94,9 +97,10 @@ public class MethodLexer {
 
     public static ParsedQueryMethod parseQueryMethod(String methodName, String entityName) {
         List<String> syntaxErrors = new ArrayList<>();
+        List<String> suggestedNames = new ArrayList<>();
 
         if (methodName == null) {
-            return new ParsedQueryMethod(null, false, null, syntaxErrors, null, false, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), 0);
+            return new ParsedQueryMethod(null, false, null, syntaxErrors, null, false, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), 0, suggestedNames);
         }
 
         Matcher orderTypoMatcher = ORDER_TYPO_PATTERN.matcher(methodName);
@@ -104,6 +108,7 @@ public class MethodLexer {
             String matched = orderTypoMatcher.group(1);
             if (!matched.equals("OrderBy") && (!matched.startsWith("OrderBy") || Pattern.compile("^OrderBy[a-z]").matcher(matched).find())) {
                 syntaxErrors.add("Spring Data JPA: Invalid sort keyword '" + matched + "'. Did you mean 'OrderBy'?");
+                suggestedNames.add(methodName.replace(matched, "OrderBy"));
             }
         }
 
@@ -117,8 +122,10 @@ public class MethodLexer {
                 String matchedKeyword = byTypoMatcher.group(1);
                 byLength = matchedKeyword.length();
                 syntaxErrors.add("Spring Data JPA: Invalid keyword '" + matchedKeyword + "'. Did you mean 'By'?");
+                String fixedByName = methodName.substring(0, byIndex) + "By" + methodName.substring(byIndex + byLength);
+                suggestedNames.add(fixedByName);
             } else {
-                return new ParsedQueryMethod(methodName, false, null, syntaxErrors, null, false, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), 0);
+                return new ParsedQueryMethod(methodName, false, null, syntaxErrors, null, false, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), 0, suggestedNames);
             }
         }
 
@@ -128,7 +135,9 @@ public class MethodLexer {
         // Check for typo in 'By' like 'countBysRole' -> extra 's'
         if (remainder.length() > 1 && Character.isLowerCase(remainder.charAt(0)) && Character.isUpperCase(remainder.charAt(1))) {
             char extraChar = remainder.charAt(0);
-            syntaxErrors.add("Spring Data JPA: Unexpected character '" + extraChar + "' after 'By'. Did you mean '" + rawPrefix + remainder.substring(1) + "'?");
+            String fixedExtraCharName = rawPrefix + remainder.substring(1);
+            syntaxErrors.add("Spring Data JPA: Unexpected character '" + extraChar + "' after 'By'. Did you mean '" + fixedExtraCharName + "'?");
+            suggestedNames.add(fixedExtraCharName);
             remainder = remainder.substring(1);
         }
 
@@ -146,7 +155,9 @@ public class MethodLexer {
 
             if (!VALID_PREFIX_ROOTS.contains(rootVerb)) {
                 String closest = getClosestVerb(rootVerb);
-                prefixError = "Spring Data JPA: Unknown query verb '" + rootVerb + "'. Did you mean '" + closest + modifier + "By'?";
+                String modStr = modifier != null ? modifier : "";
+                prefixError = "Spring Data JPA: Unknown query verb '" + rootVerb + "'. Did you mean '" + closest + modStr + "By'?";
+                suggestedNames.add(closest + modStr + "By" + remainder);
             } else {
                 subject = rootVerb;
 
@@ -222,7 +233,8 @@ public class MethodLexer {
                 conditions,
                 conjunctions,
                 sorts,
-                totalExpectedParams
+                totalExpectedParams,
+                suggestedNames
         );
     }
 
