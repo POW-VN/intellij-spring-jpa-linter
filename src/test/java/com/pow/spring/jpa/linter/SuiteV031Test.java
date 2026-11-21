@@ -85,4 +85,64 @@ public class SuiteV031Test {
         ExplanationResult res = QueryExplainer.explainQueryMethod(parsed, "Invoice", Collections.emptyList(), "en");
         assertThat(res.getSqlPreview()).contains("IS EMPTY");
     }
+
+    @Test
+    void testFindAaallllByOrderByCreatedAtDesc_catchesTypoAndSuggestsFindAllBy() {
+        ParsedQueryMethod parsed = MethodLexer.parseQueryMethod("findAaallllByOrderByCreatedAtDesc", "Invoice");
+        assertThat(parsed.isDerivedQuery()).isTrue();
+        assertThat(parsed.getPrefixError()).contains("Invalid modifier 'Aaallll'");
+        assertThat(parsed.getPrefixError()).contains("Did you mean 'All'?");
+        assertThat(parsed.getSuggestedMethodNames()).contains("findAllByOrderByCreatedAtDesc");
+
+        JavaMethodInfo method = new JavaMethodInfo("findAaallllByOrderByCreatedAtDesc", "List<Invoice>", false, 0);
+        List<DiagnosticIssue> issues = validator.validateMethod(method, "Invoice");
+        assertThat(issues).isNotEmpty();
+        assertThat(issues.get(0).getMessage()).contains("Did you mean 'All'?");
+    }
+
+    @Test
+    void testFindAlllByStatus_suggestsFindAllByStatus() {
+        ParsedQueryMethod parsed = MethodLexer.parseQueryMethod("findAlllByStatus", "Invoice");
+        assertThat(parsed.getPrefixError()).contains("Did you mean 'All'?");
+        assertThat(parsed.getSuggestedMethodNames()).contains("findAllByStatus");
+    }
+
+    @Test
+    void testFindDistnctByStatus_suggestsFindDistinctByStatus() {
+        ParsedQueryMethod parsed = MethodLexer.parseQueryMethod("findDistnctByStatus", "Invoice");
+        assertThat(parsed.getPrefixError()).contains("Did you mean 'Distinct'?");
+        assertThat(parsed.getSuggestedMethodNames()).contains("findDistinctByStatus");
+    }
+
+    @Test
+    void testFindTop0ByStatus_flagsLimitGreaterThanZero() {
+        ParsedQueryMethod parsed = MethodLexer.parseQueryMethod("findTop0ByStatus", "Invoice");
+        assertThat(parsed.getPrefixError()).contains("Limit count in 'Top0' must be greater than 0");
+        assertThat(parsed.getSuggestedMethodNames()).contains("findTop1ByStatus");
+    }
+
+    @Test
+    void testFindByStatusAnddRole_catchesConjunctionTypo() {
+        ParsedQueryMethod parsed = MethodLexer.parseQueryMethod("findByStatusAnddRole", "Invoice");
+        assertThat(parsed.getSyntaxErrors()).isNotEmpty();
+        assertThat(parsed.getSyntaxErrors().get(0)).contains("Invalid conjunction 'Andd'");
+        assertThat(parsed.getSuggestedMethodNames()).contains("findByStatusAndRole");
+    }
+
+    @Test
+    void testIncompleteByClause() {
+        ParsedQueryMethod p1 = MethodLexer.parseQueryMethod("findBy", "Invoice");
+        assertThat(p1.getSyntaxErrors()).isNotEmpty();
+        assertThat(p1.getSyntaxErrors().get(0)).contains("incomplete 'By' clause");
+
+        ParsedQueryMethod p2 = MethodLexer.parseQueryMethod("findAllBy", "Invoice");
+        assertThat(p2.getSyntaxErrors()).isNotEmpty();
+        assertThat(p2.getSyntaxErrors().get(0)).contains("incomplete 'By' clause");
+    }
+
+    @Test
+    void testUnrecognizedModifier_flagsError() {
+        ParsedQueryMethod parsed = MethodLexer.parseQueryMethod("findFoobarByStatus", "Invoice");
+        assertThat(parsed.getPrefixError()).contains("Unrecognized modifier 'Foobar'");
+    }
 }

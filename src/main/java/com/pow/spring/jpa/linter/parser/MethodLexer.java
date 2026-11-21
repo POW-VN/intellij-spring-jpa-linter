@@ -164,7 +164,12 @@ public class MethodLexer {
                 subject = rootVerb;
 
                 if (modifier != null && !modifier.isEmpty()) {
-                    if ("All".equals(modifier)) {
+                    // 1. Check for typos of 'All': Aaallll, Alll, Al, Aall, etc.
+                    if (!"All".equals(modifier) && (modifier.matches("(?i)^a+l+$") || (levenshtein(modifier.toLowerCase(), "all") <= 1 && modifier.length() <= 4))) {
+                        prefixError = "Spring Data JPA: Invalid modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Did you mean 'All'?";
+                        suggestedNames.add(rootVerb + "AllBy" + remainder);
+                        modifier = "";
+                    } else if ("All".equals(modifier)) {
                         modifier = "";
                     } else if (modifier.startsWith("AllDistinct")) {
                         isDistinct = true;
@@ -182,35 +187,49 @@ public class MethodLexer {
                     } else if (modifier.startsWith("DistinctTop") || modifier.startsWith("DistinctFirst")) {
                         isDistinct = true;
                         modifier = modifier.substring(8);
-                    } else if (Pattern.compile("^dis[a-z]+ct", Pattern.CASE_INSENSITIVE).matcher(modifier).find()) {
+                    } else if (Pattern.compile("^dis[a-z]+ct", Pattern.CASE_INSENSITIVE).matcher(modifier).find() || (levenshtein(modifier.toLowerCase(), "distinct") <= 2 && modifier.length() >= 6)) {
                         prefixError = "Spring Data JPA: Invalid keyword '" + modifier + "' in prefix. Did you mean 'Distinct'?";
+                        suggestedNames.add(rootVerb + "DistinctBy" + remainder);
+                        modifier = "";
                     }
 
                     Matcher limitMatcher = Pattern.compile("^(Top|First)(\\d+)?$").matcher(modifier);
                     if (limitMatcher.matches()) {
                         String countStr = limitMatcher.group(2);
-                        limit = (countStr != null && !countStr.isEmpty()) ? Integer.parseInt(countStr) : 1;
+                        int count = (countStr != null && !countStr.isEmpty()) ? Integer.parseInt(countStr) : 1;
+                        if (count == 0) {
+                            prefixError = "Spring Data JPA: Limit count in '" + modifier + "' must be greater than 0.";
+                            suggestedNames.add(rootVerb + limitMatcher.group(1) + "1By" + remainder);
+                        } else {
+                            limit = count;
+                        }
                         modifier = "";
                     } else if (Pattern.compile("^(Top|First)", Pattern.CASE_INSENSITIVE).matcher(modifier).find()) {
-                        String intended = modifier.startsWith("Top") ? "Top" : "First";
+                        String intended = modifier.toLowerCase().startsWith("top") ? "Top" : "First";
                         prefixError = "Spring Data JPA: Invalid limit modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Did you mean '" + intended + "' or '" + intended + "1'?";
-                    } else if (entityName != null && (modifier.equals(entityName) || modifier.equals(entityName + "s"))) {
+                        suggestedNames.add(rootVerb + intended + "By" + remainder);
+                        modifier = "";
+                    } else if (entityName != null && (modifier.equalsIgnoreCase(entityName) || modifier.equalsIgnoreCase(entityName + "s"))) {
                         // allowed entity descriptor
                         modifier = "";
                     } else if (!modifier.isEmpty()) {
                         Matcher topEntityMatcher = Pattern.compile("^(Top|First)(\\d+)?([A-Z].*)$").matcher(modifier);
                         if (topEntityMatcher.matches()) {
                             String countStr = topEntityMatcher.group(2);
-                            limit = (countStr != null && !countStr.isEmpty()) ? Integer.parseInt(countStr) : 1;
-                            modifier = "";
-                        } else if (modifier.matches("^[A-Z][a-zA-Z0-9]*$")) {
-                            if (Pattern.compile("^(dis|t[o0]p|f[i1]rst)", Pattern.CASE_INSENSITIVE).matcher(modifier).find()) {
-                                prefixError = "Spring Data JPA: Unrecognized modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Valid modifiers are 'Distinct', 'Top<N>', 'First<N>'.";
+                            int count = (countStr != null && !countStr.isEmpty()) ? Integer.parseInt(countStr) : 1;
+                            if (count == 0) {
+                                prefixError = "Spring Data JPA: Limit count in '" + modifier + "' must be greater than 0.";
                             } else {
-                                modifier = "";
+                                limit = count;
                             }
+                            modifier = "";
                         } else {
-                            prefixError = "Spring Data JPA: Unrecognized modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Valid modifiers are 'Distinct', 'Top<N>', 'First<N>'.";
+                            if (entityName != null && (levenshtein(modifier.toLowerCase(), entityName.toLowerCase()) <= 2 || levenshtein(modifier.toLowerCase(), (entityName.toLowerCase() + "s")) <= 2)) {
+                                prefixError = "Spring Data JPA: Unknown modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Did you mean '" + entityName + "'?";
+                                suggestedNames.add(rootVerb + entityName + "By" + remainder);
+                            } else {
+                                prefixError = "Spring Data JPA: Unrecognized modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Valid modifiers are 'All', 'Distinct', 'Top<N>', 'First<N>'" + (entityName != null ? ", or entity name '" + entityName + "'" : "") + ".";
+                            }
                         }
                     }
                 }
@@ -221,6 +240,10 @@ public class MethodLexer {
         String criteriaPart = remainder;
         String orderPart = "";
 
+        if (remainder.isEmpty()) {
+            syntaxErrors.add("Spring Data JPA: Query method '" + methodName + "' has an incomplete 'By' clause. Missing criteria or 'OrderBy'.");
+        }
+
         int orderByIndex = remainder.indexOf("OrderBy");
         if (orderByIndex != -1) {
             criteriaPart = remainder.substring(0, orderByIndex);
@@ -228,6 +251,15 @@ public class MethodLexer {
         }
 
         List<QuerySort> sorts = parseOrderPart(orderPart);
+
+        // Check conjunction typos (e.g. Andd, Orr)
+        Matcher conjTypoMatcher = Pattern.compile("(?<=[a-z])(Andd|Annd|Adn|Orr|Oor)(?=[A-Z])").matcher(criteriaPart);
+        if (conjTypoMatcher.find()) {
+            String matched = conjTypoMatcher.group(1);
+            String correctConj = matched.startsWith("A") ? "And" : "Or";
+            syntaxErrors.add("Spring Data JPA: Invalid conjunction '" + matched + "'. Did you mean '" + correctConj + "'?");
+            suggestedNames.add(methodName.replace(matched, correctConj));
+        }
 
         List<QueryCondition> conditions = new ArrayList<>();
         List<String> conjunctions = new ArrayList<>();
@@ -401,5 +433,19 @@ public class MethodLexer {
         if (verb.startsWith("exist")) return "exists";
         if (verb.startsWith("delete")) return "delete";
         return "find";
+    }
+
+    public static int levenshtein(String a, String b) {
+        int m = a.length(), n = b.length();
+        int[][] d = new int[m + 1][n + 1];
+        for (int i = 0; i <= m; i++) d[i][0] = i;
+        for (int j = 0; j <= n; j++) d[0][j] = j;
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                int cost = Character.toLowerCase(a.charAt(i - 1)) == Character.toLowerCase(b.charAt(j - 1)) ? 0 : 1;
+                d[i][j] = Math.min(Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1), d[i - 1][j - 1] + cost);
+            }
+        }
+        return d[m][n];
     }
 }
