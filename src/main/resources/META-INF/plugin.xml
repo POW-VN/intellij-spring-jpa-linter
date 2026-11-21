@@ -1,0 +1,42 @@
+<idea-plugin>
+    <id>com.pow.spring.jpa.linter</id>
+    <name>Spring Data JPA Query Method Linter</name>
+    <vendor email="pqb1892005@gmail.com" url="https://github.com/POW-VN">POW</vendor>
+    <version>0.2.3</version>
+
+    <description><![CDATA[
+        <h2>Spring Data JPA Query Method Linter</h2>
+        <p>Real-time validation, syntax typo detection, and instant SQL/JPQL preview for Spring Data JPA derived query methods.</p>
+        <h3>Features</h3>
+        <ul>
+            <li><strong>Real-time Typo Detection:</strong> Validates method property names against JPA <code>@Entity</code> fields.</li>
+            <li><strong>Smart Suggestions:</strong> Catches typos in verbs (<code>findsTop</code> &rarr; <code>findTop</code>), operators (<code>Betwen</code> &rarr; <code>Between</code>), and sort directions (<code>Desssc</code> &rarr; <code>Desc</code>).</li>
+            <li><strong>SQL / JPQL Preview:</strong> Inspect generated JPQL and SQL queries directly on hover or <code>Ctrl+Q</code>.</li>
+            <li><strong>Deep Traversal:</strong> Supports multi-level entity navigation (e.g. <code>findByRoom_Building_Manager_Name</code>).</li>
+            <li><strong>100% Offline:</strong> No cloud dependencies, zero external tokens, ultra-fast in-memory analysis.</li>
+        </ul>
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <ul>
+            <li>0.2.3: Initial release with real-time derived query method validation and SQL hover preview.</li>
+        </ul>
+    ]]></change-notes>
+
+    <!-- Compatibility with both IntelliJ Community and Ultimate -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="JAVA"
+                         shortName="SpringJpaQueryInspection"
+                         displayName="Spring Data JPA query method validation"
+                         groupName="Spring Data JPA"
+                         enabledByDefault="true"
+                         level="ERROR"
+                         implementationClass="com.pow.spring.jpa.linter.intellij.SpringJpaQueryInspection"/>
+        <lang.documentationProvider language="JAVA"
+                                    order="first"
+                                    implementationClass="com.pow.spring.jpa.linter.intellij.SpringJpaQueryDocumentationProvider"/>
+    </extensions>
+</idea-plugin>
