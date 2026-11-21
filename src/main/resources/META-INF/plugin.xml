@@ -24,6 +24,7 @@
     ]]></change-notes>
 
     <!-- Compatibility with both IntelliJ Community and Ultimate -->
+    <idea-version since-build="231"/>
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
 
