@@ -137,6 +137,35 @@ public class QueryValidator {
             ));
         }
 
+        // 6. Return type and signature validation
+        String retType = method.getReturnType() != null ? method.getReturnType().trim() : "";
+        if ((retType.startsWith("Page") || retType.startsWith("Slice")) && !method.isHasPageable()) {
+            issues.add(new DiagnosticIssue(
+                    "Spring Data JPA: Method returning '" + (retType.startsWith("Page") ? "Page" : "Slice") + "' must declare a 'Pageable' parameter.",
+                    "Error",
+                    name,
+                    Collections.emptyList()
+            ));
+        }
+
+        if (("count".equals(parsed.getSubject()) || name.startsWith("count")) && !Arrays.asList("long", "Long", "int", "Integer", "Object").contains(retType)) {
+            issues.add(new DiagnosticIssue(
+                    "Spring Data JPA: 'countBy' query method must return a numeric type (long, Long, int, Integer), but found '" + retType + "'.",
+                    "Error",
+                    name,
+                    Collections.emptyList()
+            ));
+        }
+
+        if (("exists".equals(parsed.getSubject()) || name.startsWith("exists")) && !Arrays.asList("boolean", "Boolean", "Object").contains(retType)) {
+            issues.add(new DiagnosticIssue(
+                    "Spring Data JPA: 'existsBy' query method must return 'boolean' or 'Boolean', but found '" + retType + "'.",
+                    "Error",
+                    name,
+                    Collections.emptyList()
+            ));
+        }
+
         return issues;
     }
 

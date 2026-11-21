@@ -2,7 +2,7 @@
     <id>com.pow.spring.jpa.linter</id>
     <name>Spring Data JPA Query Method Linter</name>
     <vendor email="pqb1892005@gmail.com" url="https://github.com/POW-VN">POW</vendor>
-    <version>0.3.1</version>
+    <version>0.3.2</version>
 
     <description><![CDATA[
         <h2>Spring Data JPA Query Method Linter</h2>

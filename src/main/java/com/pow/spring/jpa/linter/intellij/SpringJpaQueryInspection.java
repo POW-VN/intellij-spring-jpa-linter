@@ -64,9 +64,13 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
 
                 QueryValidator validator = new QueryValidator(resolver);
                 int effectiveParamCount = 0;
+                boolean hasPageable = false;
                 for (PsiParameter p : method.getParameterList().getParameters()) {
                     String typeText = p.getType().getPresentableText();
-                    if (!typeText.contains("Pageable") && !typeText.contains("Sort") && !typeText.contains("Limit") && !typeText.contains("ScrollPosition")) {
+                    if (typeText.contains("Pageable")) {
+                        hasPageable = true;
+                    }
+                    if (!typeText.contains("Pageable") && !typeText.contains("Sort") && !typeText.contains("Limit") && !typeText.contains("ScrollPosition") && !typeText.startsWith("Class")) {
                         effectiveParamCount++;
                     }
                 }
@@ -75,7 +79,8 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
                         methodName,
                         method.getReturnType() != null ? method.getReturnType().getPresentableText() : "void",
                         false,
-                        effectiveParamCount
+                        effectiveParamCount,
+                        hasPageable
                 );
 
                 List<DiagnosticIssue> issues = validator.validateMethod(methodInfo, entityName);
