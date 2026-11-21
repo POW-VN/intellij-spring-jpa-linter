@@ -2,7 +2,7 @@
     <id>com.pow.spring.jpa.linter</id>
     <name>Spring Data JPA Query Method Linter</name>
     <vendor email="pqb1892005@gmail.com" url="https://github.com/POW-VN">POW</vendor>
-    <version>0.2.3</version>
+    <version>0.3.1</version>
 
     <description><![CDATA[
         <h2>Spring Data JPA Query Method Linter</h2>
@@ -10,7 +10,7 @@
         <h3>Features</h3>
         <ul>
             <li><strong>Real-time Typo Detection:</strong> Validates method property names against JPA <code>@Entity</code> fields.</li>
-            <li><strong>Smart Suggestions:</strong> Catches typos in verbs (<code>findsTop</code> &rarr; <code>findTop</code>), operators (<code>Betwen</code> &rarr; <code>Between</code>), and sort directions (<code>Desssc</code> &rarr; <code>Desc</code>).</li>
+            <li><strong>Smart Suggestions & Quick Fix:</strong> 1-click Quick Fix (Alt+Enter / Ctrl+.) for typos in verbs, operators, sort directions, and properties.</li>
             <li><strong>SQL / JPQL Preview:</strong> Inspect generated JPQL and SQL queries directly on hover or <code>Ctrl+Q</code>.</li>
             <li><strong>Deep Traversal:</strong> Supports multi-level entity navigation (e.g. <code>findByRoom_Building_Manager_Name</code>).</li>
             <li><strong>100% Offline:</strong> No cloud dependencies, zero external tokens, ultra-fast in-memory analysis.</li>
@@ -19,6 +19,8 @@
 
     <change-notes><![CDATA[
         <ul>
+            <li>0.3.1: Support 'All' prefix modifier (findAllByOrderBy...), collection operators (IsEmpty/IsNotEmpty), and Spring 3.1+ Limit parameters.</li>
+            <li>0.3.0: Added Quick Fix (Alt+Enter) support for query method errors and typos.</li>
             <li>0.2.3: Initial release with real-time derived query method validation and SQL hover preview.</li>
         </ul>
     ]]></change-notes>

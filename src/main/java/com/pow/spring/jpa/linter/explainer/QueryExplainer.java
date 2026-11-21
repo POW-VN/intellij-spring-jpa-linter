@@ -94,6 +94,16 @@ public class QueryExplainer {
                     condText = "vi".equals(lang) ? "`" + rawProp + "` là FALSE" : "`" + rawProp + "` is FALSE";
                     sqlCond = propPath + " = false";
                     break;
+                case "IsEmpty":
+                case "Empty":
+                    condText = "vi".equals(lang) ? "`" + rawProp + "` rỗng (IS EMPTY)" : "`" + rawProp + "` IS EMPTY";
+                    sqlCond = propPath + " IS EMPTY";
+                    break;
+                case "IsNotEmpty":
+                case "NotEmpty":
+                    condText = "vi".equals(lang) ? "`" + rawProp + "` không rỗng (IS NOT EMPTY)" : "`" + rawProp + "` IS NOT EMPTY";
+                    sqlCond = propPath + " IS NOT EMPTY";
+                    break;
                 case "Between": {
                     String fallbackP2 = ":" + decapitalize(rawProp) + "End";
                     String p2Name = (paramNames != null && paramIndex < paramNames.size()) ? ":" + paramNames.get(paramIndex++) : fallbackP2;

@@ -66,7 +66,7 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
                 int effectiveParamCount = 0;
                 for (PsiParameter p : method.getParameterList().getParameters()) {
                     String typeText = p.getType().getPresentableText();
-                    if (!typeText.contains("Pageable") && !typeText.contains("Sort")) {
+                    if (!typeText.contains("Pageable") && !typeText.contains("Sort") && !typeText.contains("Limit") && !typeText.contains("ScrollPosition")) {
                         effectiveParamCount++;
                     }
                 }

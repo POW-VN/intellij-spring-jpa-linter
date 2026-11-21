@@ -30,6 +30,7 @@ public class MethodLexer {
             new OperatorDef("GreaterThanEqual", 1, "AfterEqual"),
             new OperatorDef("LessThanEqual", 1, "BeforeEqual"),
             new OperatorDef("NotContaining", 1, "NotContains", "IsNotContaining"),
+            new OperatorDef("IsNotEmpty", 0, "NotEmpty"),
             new OperatorDef("IsNotNull", 0, "NotNull"),
             new OperatorDef("StartingWith", 1, "StartsWith", "IsStartingWith"),
             new OperatorDef("EndingWith", 1, "EndsWith", "IsEndingWith"),
@@ -39,6 +40,7 @@ public class MethodLexer {
             new OperatorDef("Between", 2, "IsBetween"),
             new OperatorDef("NotLike", 1, "IsNotLike"),
             new OperatorDef("NotIn", 1, "IsNotIn"),
+            new OperatorDef("IsEmpty", 0, "Empty"),
             new OperatorDef("IsNull", 0, "Null"),
             new OperatorDef("IsTrue", 0, "True"),
             new OperatorDef("IsFalse", 0, "False"),
@@ -162,6 +164,18 @@ public class MethodLexer {
                 subject = rootVerb;
 
                 if (modifier != null && !modifier.isEmpty()) {
+                    if ("All".equals(modifier)) {
+                        modifier = "";
+                    } else if (modifier.startsWith("AllDistinct")) {
+                        isDistinct = true;
+                        modifier = modifier.substring(11);
+                    } else if (modifier.startsWith("DistinctAll")) {
+                        isDistinct = true;
+                        modifier = modifier.substring(11);
+                    } else if (modifier.startsWith("All")) {
+                        modifier = modifier.substring(3);
+                    }
+
                     if ("Distinct".equals(modifier)) {
                         isDistinct = true;
                         modifier = "";
@@ -176,13 +190,28 @@ public class MethodLexer {
                     if (limitMatcher.matches()) {
                         String countStr = limitMatcher.group(2);
                         limit = (countStr != null && !countStr.isEmpty()) ? Integer.parseInt(countStr) : 1;
+                        modifier = "";
                     } else if (Pattern.compile("^(Top|First)", Pattern.CASE_INSENSITIVE).matcher(modifier).find()) {
                         String intended = modifier.startsWith("Top") ? "Top" : "First";
                         prefixError = "Spring Data JPA: Invalid limit modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Did you mean '" + intended + "' or '" + intended + "1'?";
                     } else if (entityName != null && (modifier.equals(entityName) || modifier.equals(entityName + "s"))) {
                         // allowed entity descriptor
+                        modifier = "";
                     } else if (!modifier.isEmpty()) {
-                        prefixError = "Spring Data JPA: Unrecognized modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Valid modifiers are 'Distinct', 'Top<N>', 'First<N>'.";
+                        Matcher topEntityMatcher = Pattern.compile("^(Top|First)(\\d+)?([A-Z].*)$").matcher(modifier);
+                        if (topEntityMatcher.matches()) {
+                            String countStr = topEntityMatcher.group(2);
+                            limit = (countStr != null && !countStr.isEmpty()) ? Integer.parseInt(countStr) : 1;
+                            modifier = "";
+                        } else if (modifier.matches("^[A-Z][a-zA-Z0-9]*$")) {
+                            if (Pattern.compile("^(dis|t[o0]p|f[i1]rst)", Pattern.CASE_INSENSITIVE).matcher(modifier).find()) {
+                                prefixError = "Spring Data JPA: Unrecognized modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Valid modifiers are 'Distinct', 'Top<N>', 'First<N>'.";
+                            } else {
+                                modifier = "";
+                            }
+                        } else {
+                            prefixError = "Spring Data JPA: Unrecognized modifier '" + modifier + "' in prefix '" + rawPrefix + "'. Valid modifiers are 'Distinct', 'Top<N>', 'First<N>'.";
+                        }
                     }
                 }
             }
