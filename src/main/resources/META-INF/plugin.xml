@@ -19,6 +19,7 @@
 
     <change-notes><![CDATA[
         <ul>
+            <li>0.3.2: Support entity subject descriptors (findDistinctInvoiceBy...), AllIgnoreCase suffix, dynamic projections (Class<T>), PascalCase validation, and signature/return type validation.</li>
             <li>0.3.1: Support 'All' prefix modifier (findAllByOrderBy...), collection operators (IsEmpty/IsNotEmpty), and Spring 3.1+ Limit parameters.</li>
             <li>0.3.0: Added Quick Fix (Alt+Enter) support for query method errors and typos.</li>
             <li>0.2.3: Initial release with real-time derived query method validation and SQL hover preview.</li>
