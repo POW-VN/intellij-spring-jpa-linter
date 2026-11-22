@@ -2,7 +2,7 @@
     <id>com.pow.spring.jpa.linter</id>
     <name>Spring Data JPA Query Method Linter</name>
     <vendor email="pqb1892005@gmail.com" url="https://github.com/POW-VN">POW</vendor>
-    <version>0.3.2</version>
+    <version>0.3.3</version>
 
     <description><![CDATA[
         <h2>Spring Data JPA Query Method Linter</h2>
@@ -19,6 +19,7 @@
 
     <change-notes><![CDATA[
         <ul>
+            <li>0.3.3: Comprehensive user documentation, Quick Start guide, and installation cheat sheet.</li>
             <li>0.3.2: Support entity subject descriptors (findDistinctInvoiceBy...), AllIgnoreCase suffix, dynamic projections (Class<T>), PascalCase validation, and signature/return type validation.</li>
             <li>0.3.1: Support 'All' prefix modifier (findAllByOrderBy...), collection operators (IsEmpty/IsNotEmpty), and Spring 3.1+ Limit parameters.</li>
             <li>0.3.0: Added Quick Fix (Alt+Enter) support for query method errors and typos.</li>

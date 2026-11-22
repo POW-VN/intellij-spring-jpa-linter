@@ -2,6 +2,11 @@
 
 All notable changes to the **Spring Data JPA Query Method Linter (IntelliJ Plugin)** will be documented in this file.
 
+## [0.3.3] - 2026-11-22
+
+### Documentation & Refinement
+- Added comprehensive user guides, Quick Start, installation instructions, and keyword reference cheat sheet.
+
 ## [0.3.2] - 2026-11-22
 
 ### Added

@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests: 235 Passing](https://img.shields.io/badge/Tests-235%20Passing-brightgreen.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
-[![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.2-blue.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
+[![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.3-blue.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
 [![Platform: 2023.1+](https://img.shields.io/badge/IntelliJ-2023.1+-orange.svg)](https://plugins.jetbrains.com)
 
 Real-time validation, syntax typo detection, 1-click Quick Fix, and instant SQL/JPQL preview for **Spring Data JPA** derived query methods in IntelliJ IDEA (compatible with both **Community** and **Ultimate** editions).
@@ -55,10 +55,10 @@ Catch errors in repository method names **as you type**, without waiting for Spr
 4. Restart IntelliJ IDEA if prompted.
 
 ### Method 2: Install from ZIP (Offline / Manual)
-1. Download the latest `spring-jpa-linter-0.3.2.zip`.
+1. Download the latest `spring-jpa-linter-0.3.3.zip`.
 2. In IntelliJ IDEA, go to **Settings / Preferences** (`Ctrl + Alt + S`) ➔ **Plugins**.
 3. Click the gear icon ⚙️ ➔ select **`Install Plugin from Disk...`**.
-4. Choose `spring-jpa-linter-0.3.2.zip` and click **OK**.
+4. Choose `spring-jpa-linter-0.3.3.zip` and click **OK**.
 5. Restart the IDE.
 
 ---
