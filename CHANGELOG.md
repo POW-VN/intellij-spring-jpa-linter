@@ -2,6 +2,15 @@
 
 All notable changes to the **Spring Data JPA Query Method Linter (IntelliJ Plugin)** will be documented in this file.
 
+## [0.4.0] - 2026-11-23
+
+### Added & Fixed (Smart Entity Resolution Engine)
+- **Automatic Relation Auto-Detection:** Automatically recognizes relations when a field type matches any entity in workspace/cache, even if relation annotations are omitted or non-standard (`@ManyToMany`, `@EmbeddedId`).
+- **Deep Recursive CamelCase Traversal:** Enables 3+ levels of property navigation without underscores (e.g. `findByInvoiceContractRoomNumber` -> `invoice.contract.room.number`).
+- **`@MappedSuperclass` Inheritance Support:** Automatically merges base entity fields (`id`, `createdAt`, `updatedAt`) into subclasses.
+- **Accurate Nested JPQL/SQL Preview:** SQL hover preview now renders correct nested query paths (e.g. `WHERE i.invoice.id = :invoiceId` instead of `WHERE i.invoiceId = :invoiceId`).
+- **`@Transient` Field Protection:** Flags errors if a query method references non-persistent `@Transient` properties.
+
 ## [0.3.3] - 2026-11-22
 
 ### Documentation & Refinement

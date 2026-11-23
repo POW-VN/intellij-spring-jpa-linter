@@ -1,6 +1,7 @@
 package com.pow.spring.jpa.linter.explainer;
 
 import com.pow.spring.jpa.linter.parser.*;
+import com.pow.spring.jpa.linter.resolver.EntityResolver;
 
 import java.util.*;
 
@@ -11,6 +12,16 @@ public class QueryExplainer {
             String entityName,
             List<String> paramNames,
             String lang
+    ) {
+        return explainQueryMethod(parsed, entityName, paramNames, lang, null);
+    }
+
+    public static ExplanationResult explainQueryMethod(
+            ParsedQueryMethod parsed,
+            String entityName,
+            List<String> paramNames,
+            String lang,
+            EntityResolver resolver
     ) {
         if (!parsed.isDerivedQuery()) {
             return new ExplanationResult("", "", "", "");
@@ -66,7 +77,7 @@ public class QueryExplainer {
         for (int i = 0; i < parsed.getConditions().size(); i++) {
             QueryCondition cond = parsed.getConditions().get(i);
             String rawProp = cond.getPropertyName();
-            String propPath = formatPropertyPath(rawProp, alias);
+            String propPath = formatPropertyPath(rawProp, alias, entityName, resolver);
 
             String condText = "";
             String sqlCond = "";
@@ -176,7 +187,7 @@ public class QueryExplainer {
         List<String> orderDescriptions = new ArrayList<>();
         List<String> orderClauses = new ArrayList<>();
         for (QuerySort s : parsed.getSorts()) {
-            String propPath = formatPropertyPath(s.getPropertyName(), alias);
+            String propPath = formatPropertyPath(s.getPropertyName(), alias, entityName, resolver);
             String dirUpper = s.getDirection() != null ? s.getDirection().toUpperCase() : "ASC";
             orderDescriptions.add("`" + s.getPropertyName() + "` " + dirUpper);
             orderClauses.add(propPath + " " + dirUpper);
@@ -281,7 +292,17 @@ public class QueryExplainer {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    private static String formatPropertyPath(String rawProp, String alias) {
+    private static String formatPropertyPath(String rawProp, String alias, String entityName, EntityResolver resolver) {
+        if (resolver != null && entityName != null) {
+            EntityResolver.PropertyResolution res = resolver.resolvePropertyPath(entityName, rawProp);
+            if (res != null && res.valid && res.pathSegments != null && res.pathSegments.size() > 1) {
+                StringBuilder sb = new StringBuilder(alias);
+                for (String part : res.pathSegments) {
+                    sb.append(".").append(decapitalize(part));
+                }
+                return sb.toString();
+            }
+        }
         if (rawProp.contains("_")) {
             String[] parts = rawProp.split("_");
             StringBuilder sb = new StringBuilder(alias);

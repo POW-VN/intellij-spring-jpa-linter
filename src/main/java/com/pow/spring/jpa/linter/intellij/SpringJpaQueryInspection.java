@@ -153,6 +153,12 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
             PsiType fieldType = field.getType();
             info.addField(fieldName, fieldType.getPresentableText());
 
+            if (field.hasAnnotation("jakarta.persistence.Transient")
+                    || field.hasAnnotation("javax.persistence.Transient")
+                    || field.hasModifierProperty(PsiModifier.TRANSIENT)) {
+                info.addTransientField(fieldName);
+            }
+
             // Check if relation or complex object
             if (fieldType instanceof PsiClassType classType) {
                 PsiType[] typeArgs = classType.getParameters();
@@ -184,8 +190,18 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
                 }
                 if (propName != null && !info.getFields().containsKey(propName)) {
                     info.addField(propName, m.getReturnType().getPresentableText());
+                    if (m.hasAnnotation("jakarta.persistence.Transient")
+                            || m.hasAnnotation("javax.persistence.Transient")) {
+                        info.addTransientField(propName);
+                    }
                 }
             }
+        }
+
+        PsiClass superClass = psiClass.getSuperClass();
+        if (superClass != null && !"java.lang.Object".equals(superClass.getQualifiedName())) {
+            info.setSuperClassName(superClass.getName());
+            registerEntityRecursively(project, superClass, resolver, visited);
         }
 
         resolver.registerEntity(info);
@@ -212,6 +228,8 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
                 || cls.hasAnnotation("javax.persistence.Table")
                 || cls.hasAnnotation("jakarta.persistence.Embeddable")
                 || cls.hasAnnotation("javax.persistence.Embeddable")
+                || cls.hasAnnotation("jakarta.persistence.MappedSuperclass")
+                || cls.hasAnnotation("javax.persistence.MappedSuperclass")
                 || cls.hasAnnotation("org.springframework.data.mongodb.core.mapping.Document")) {
             return true;
         }
@@ -219,7 +237,7 @@ public class SpringJpaQueryInspection extends AbstractBaseJavaLocalInspectionToo
         if (modifierList != null) {
             for (PsiAnnotation ann : modifierList.getAnnotations()) {
                 String qualifiedName = ann.getQualifiedName();
-                if (qualifiedName != null && (qualifiedName.endsWith(".Entity") || qualifiedName.endsWith(".Table") || qualifiedName.endsWith(".Document"))) {
+                if (qualifiedName != null && (qualifiedName.endsWith(".Entity") || qualifiedName.endsWith(".Table") || qualifiedName.endsWith(".Document") || qualifiedName.endsWith(".MappedSuperclass"))) {
                     return true;
                 }
             }

@@ -8,10 +8,66 @@ public class EntityResolver {
 
     public void registerEntity(EntityInfo entity) {
         entityCache.put(entity.getName(), entity);
+        resolveInheritanceAndSmartRelations();
     }
 
     public EntityInfo getEntity(String entityName) {
         return entityCache.get(entityName);
+    }
+
+    public void resolveInheritanceAndSmartRelations() {
+        // 1. Resolve inheritance: merge fields and relations from superclass
+        for (EntityInfo entity : entityCache.values()) {
+            mergeSuperClassFields(entity, new HashSet<>());
+        }
+
+        // 2. Smart auto-detect relations:
+        // If field type (or generic argument) matches an existing entity in cache,
+        // automatically mark it as relation
+        for (EntityInfo entity : entityCache.values()) {
+            for (Map.Entry<String, String> entry : new HashMap<>(entity.getFields()).entrySet()) {
+                String field = entry.getKey();
+                String type = entry.getValue();
+                if (!entity.getRelations().containsKey(field)) {
+                    String typeCandidate = type;
+                    if (type.contains("<") && type.contains(">")) {
+                        int start = type.lastIndexOf('<');
+                        int end = type.indexOf('>', start);
+                        if (start != -1 && end != -1) {
+                            typeCandidate = type.substring(start + 1, end).trim();
+                        }
+                    }
+                    if (entityCache.containsKey(typeCandidate)) {
+                        entity.addRelation(field, typeCandidate);
+                    }
+                }
+            }
+        }
+    }
+
+    private void mergeSuperClassFields(EntityInfo entity, Set<String> visited) {
+        if (entity.getSuperClassName() == null || visited.contains(entity.getName())) {
+            return;
+        }
+        visited.add(entity.getName());
+
+        EntityInfo superEntity = entityCache.get(entity.getSuperClassName());
+        if (superEntity != null) {
+            mergeSuperClassFields(superEntity, visited);
+            for (Map.Entry<String, String> entry : superEntity.getFields().entrySet()) {
+                if (!entity.getFields().containsKey(entry.getKey())) {
+                    entity.addField(entry.getKey(), entry.getValue());
+                }
+            }
+            for (Map.Entry<String, String> entry : superEntity.getRelations().entrySet()) {
+                if (!entity.getRelations().containsKey(entry.getKey())) {
+                    entity.addRelation(entry.getKey(), entry.getValue());
+                }
+            }
+            for (String tField : superEntity.getTransientFields()) {
+                entity.addTransientField(tField);
+            }
+        }
     }
 
     public static class PropertyResolution {
@@ -20,21 +76,33 @@ public class EntityResolver {
         public final String finalType;
         public final String error;
         public final String suggestion;
+        public final List<String> pathSegments;
+        public final boolean isTransient;
 
-        public PropertyResolution(boolean valid, String resolvedProperty, String finalType, String error, String suggestion) {
+        public PropertyResolution(boolean valid, String resolvedProperty, String finalType, String error, String suggestion, List<String> pathSegments, boolean isTransient) {
             this.valid = valid;
             this.resolvedProperty = resolvedProperty;
             this.finalType = finalType;
             this.error = error;
             this.suggestion = suggestion;
+            this.pathSegments = pathSegments;
+            this.isTransient = isTransient;
+        }
+
+        public static PropertyResolution success(String prop, String type, List<String> pathSegments) {
+            return new PropertyResolution(true, prop, type, null, null, pathSegments, false);
         }
 
         public static PropertyResolution success(String prop, String type) {
-            return new PropertyResolution(true, prop, type, null, null);
+            return new PropertyResolution(true, prop, type, null, null, Collections.singletonList(prop), false);
         }
 
         public static PropertyResolution failure(String error, String suggestion) {
-            return new PropertyResolution(false, null, null, error, suggestion);
+            return new PropertyResolution(false, null, null, error, suggestion, null, false);
+        }
+
+        public static PropertyResolution transientError(String field, String entityName) {
+            return new PropertyResolution(false, null, null, "Cannot query on @Transient property '" + field + "' on entity '" + entityName + "'.", null, null, true);
         }
     }
 
@@ -44,11 +112,21 @@ public class EntityResolver {
             return PropertyResolution.success(rawProperty, "Object");
         }
 
-        // Support underscore traversal: Room_Building_Manager_Name
+        // 1. Direct property check
+        String matched = findMatchingField(entity, rawProperty);
+        if (matched != null) {
+            if (entity.isTransient(matched)) {
+                return PropertyResolution.transientError(matched, entityName);
+            }
+            return PropertyResolution.success(matched, entity.getFields().get(matched), Collections.singletonList(matched));
+        }
+
+        // 2. Support underscore traversal: Room_Building_Manager_Name
         if (rawProperty.contains("_")) {
             String[] segments = rawProperty.split("_");
             EntityInfo currentEntity = entity;
             String currentType = "Object";
+            List<String> pathSegments = new ArrayList<>();
 
             for (int i = 0; i < segments.length; i++) {
                 String seg = segments[i];
@@ -63,6 +141,11 @@ public class EntityResolver {
                     );
                 }
 
+                if (currentEntity.isTransient(matchedField)) {
+                    return PropertyResolution.transientError(matchedField, currentEntity.getName());
+                }
+
+                pathSegments.add(matchedField);
                 currentType = currentEntity.getFields().get(matchedField);
 
                 // If not last segment, traverse to related entity
@@ -77,16 +160,10 @@ public class EntityResolver {
                     }
                 }
             }
-            return PropertyResolution.success(rawProperty, currentType);
+            return PropertyResolution.success(rawProperty, currentType, pathSegments);
         }
 
-        // Direct property check
-        String matched = findMatchingField(entity, rawProperty);
-        if (matched != null) {
-            return PropertyResolution.success(matched, entity.getFields().get(matched));
-        }
-
-        // Try camelCase segmentation traversal
+        // 3. Try recursive camelCase segmentation traversal
         PropertyResolution camelResolution = tryCamelCaseTraversal(entity, rawProperty);
         if (camelResolution != null && camelResolution.valid) {
             return camelResolution;
@@ -102,8 +179,11 @@ public class EntityResolver {
     }
 
     private PropertyResolution tryCamelCaseTraversal(EntityInfo entity, String prop) {
-        // Try matching prefix against relation fields
-        for (String field : entity.getFields().keySet()) {
+        List<String> sortedFields = new ArrayList<>(entity.getFields().keySet());
+        sortedFields.sort((a, b) -> Integer.compare(b.length(), a.length()));
+
+        for (String field : sortedFields) {
+            if (entity.isTransient(field)) continue;
             if (prop.length() > field.length() && prop.toLowerCase().startsWith(field.toLowerCase())) {
                 char nextChar = prop.charAt(field.length());
                 if (Character.isUpperCase(nextChar) || nextChar == '_') {
@@ -117,7 +197,14 @@ public class EntityResolver {
                         if (remainder.startsWith("_")) remainder = remainder.substring(1);
                         PropertyResolution sub = resolvePropertyPath(nextEntity.getName(), remainder);
                         if (sub.valid) {
-                            return PropertyResolution.success(prop, sub.finalType);
+                            List<String> combined = new ArrayList<>();
+                            combined.add(field);
+                            if (sub.pathSegments != null) {
+                                combined.addAll(sub.pathSegments);
+                            } else {
+                                combined.add(remainder);
+                            }
+                            return PropertyResolution.success(prop, sub.finalType, combined);
                         }
                     }
                 }
@@ -140,6 +227,7 @@ public class EntityResolver {
         int bestDistance = Integer.MAX_VALUE;
 
         for (String field : entity.getFields().keySet()) {
+            if (entity.isTransient(field)) continue;
             int d = computeLevenshtein(name.toLowerCase(), field.toLowerCase());
             if (d < bestDistance && d <= 3) {
                 bestDistance = d;

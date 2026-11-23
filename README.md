@@ -1,8 +1,8 @@
 # Spring Data JPA Query Method Linter (IntelliJ IDEA Plugin)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests: 235 Passing](https://img.shields.io/badge/Tests-235%20Passing-brightgreen.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
-[![Version: 0.3.2](https://img.shields.io/badge/Version-0.3.3-blue.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
+[![Tests: 240 Passing](https://img.shields.io/badge/Tests-240%20Passing-brightgreen.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
+[![Version: 0.4.0](https://img.shields.io/badge/Version-0.4.0-blue.svg)](https://github.com/POW-VN/intellij-spring-jpa-linter)
 [![Platform: 2023.1+](https://img.shields.io/badge/IntelliJ-2023.1+-orange.svg)](https://plugins.jetbrains.com)
 
 Real-time validation, syntax typo detection, 1-click Quick Fix, and instant SQL/JPQL preview for **Spring Data JPA** derived query methods in IntelliJ IDEA (compatible with both **Community** and **Ultimate** editions).
